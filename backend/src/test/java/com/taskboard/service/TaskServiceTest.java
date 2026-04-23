@@ -160,6 +160,40 @@ class TaskServiceTest {
             assertThatThrownBy(() -> taskService.createTask(boardId, request))
                     .isInstanceOf(BoardNotFoundException.class);
         }
+        
+        @Test
+        @DisplayName("should create task with priority")
+        void shouldCreateTaskWithPriority() {
+        	// given
+            UUID boardId = UUID.randomUUID();
+
+            TaskRequest request = new TaskRequest();
+            request.setTitle("Test Task");
+            request.setPriority(TaskPriority.HIGH); 
+
+            Board board = new Board();
+            board.setId(boardId);
+
+            Task task = Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Test Task")
+                    .priority(TaskPriority.HIGH)
+                    .board(board)
+                    .build();
+
+            when(boardRepository.findByIdAndDeletedFalse(boardId))
+                    .thenReturn(Optional.of(board));
+
+            when(taskRepository.save(any(Task.class))).thenReturn(task);
+
+            // when
+            TaskResponse result = taskService.createTask(boardId, request);
+
+            // then
+            assertThat(result.getPriority()).isEqualTo(TaskPriority.HIGH);
+            verify(taskRepository).save(any(Task.class));
+        }
+        
     }
 
     @Nested
@@ -312,6 +346,69 @@ class TaskServiceTest {
             verify(eventPublisher).publishEvent(eventCaptor.capture());
             assertThat(eventCaptor.getValue().getType()).isEqualTo(TaskEventType.TASK_UPDATED);
         }
+        
+        @Test
+        void shouldUpdateTaskPriority() {
+        	// given
+            UUID taskId = UUID.randomUUID();
+            UUID boardId = UUID.randomUUID();
+
+            Board board = Board.builder()
+                    .id(boardId)
+                    .build();
+
+            Task task = Task.builder()
+                    .id(taskId)
+                    .priority(TaskPriority.LOW)
+                    .board(board) // ✅ FIX: add board
+                    .build();
+
+            when(taskRepository.findById(taskId))
+                    .thenReturn(Optional.of(task));
+
+            when(taskRepository.save(any(Task.class)))
+                    .thenReturn(task);
+
+            // when
+            TaskResponse result = taskService.updatePriority(taskId, TaskPriority.HIGH);
+
+            // then
+            assertThat(result.getPriority()).isEqualTo(TaskPriority.HIGH);
+        }
+        
+        @Test
+        @DisplayName("should filter tasks by priority")
+        void shouldFilterTasksByPriority() {
+            // given
+            UUID boardId = UUID.randomUUID();
+
+            Board board = Board.builder().id(boardId).build();
+
+            Task highTask = Task.builder()
+                    .id(UUID.randomUUID())
+                    .priority(TaskPriority.HIGH)
+                    .board(board)
+                    .build();
+
+            Task lowTask = Task.builder()
+                    .id(UUID.randomUUID())
+                    .priority(TaskPriority.LOW)
+                    .board(board)
+                    .build();
+
+            when(boardRepository.existsById(boardId)).thenReturn(true);
+            when(taskRepository.findByBoardIdOrderByCreatedAtDesc(boardId))
+                    .thenReturn(List.of(highTask, lowTask));
+
+            // when
+            List<TaskResponse> result =
+                    taskService.getTasksByPriority(boardId, TaskPriority.HIGH);
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getPriority()).isEqualTo(TaskPriority.HIGH);
+        }
+        
     }
 
     @Nested
