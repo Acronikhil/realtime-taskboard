@@ -157,6 +157,12 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
 
+//        task.setPriority(newPriority);
+        // Adding prioriy check
+        if (newPriority == null) {
+            throw new IllegalArgumentException("Priority cannot be null");
+        }
+
         task.setPriority(newPriority);
 
         Task updatedTask = taskRepository.save(task);
