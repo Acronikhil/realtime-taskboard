@@ -409,6 +409,29 @@ class TaskServiceTest {
             assertThat(result.get(0).getPriority()).isEqualTo(TaskPriority.HIGH);
         }
         
+        @Test
+        @DisplayName("should reject null priority when updating")
+        void shouldRejectNullPriority() {
+            // given
+            UUID taskId = UUID.randomUUID();
+
+            Board board = Board.builder().id(UUID.randomUUID()).build();
+
+            Task task = Task.builder()
+                    .id(taskId)
+                    .priority(TaskPriority.LOW)
+                    .board(board)
+                    .build();
+
+            when(taskRepository.findById(taskId))
+                    .thenReturn(Optional.of(task));
+
+            // when / then
+            assertThatThrownBy(() ->
+                    taskService.updatePriority(taskId, null)
+            ).isInstanceOf(IllegalArgumentException.class);
+        }
+        
     }
 
     @Nested
