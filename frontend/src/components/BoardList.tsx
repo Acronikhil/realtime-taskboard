@@ -60,7 +60,7 @@ export function BoardList({ onSelectBoard }: BoardListProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div role="status" className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -131,9 +131,9 @@ export function BoardList({ onSelectBoard }: BoardListProps) {
           <CardContent>
             <LayoutDashboard className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-4">No boards yet. Create your first board to get started!</p>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button aria-label="create-board" onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Create Your First Board
+              Create Board
             </Button>
           </CardContent>
         </Card>
