@@ -34,18 +34,25 @@ public class WebSocketEventHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         UUID boardId = extractBoardId(session);
-        if (boardId != null) {
-            boardSessions.computeIfAbsent(boardId, k -> new CopyOnWriteArraySet<>()).add(session);
-            sessionBoardMap.put(session.getId(), boardId);
-            log.info("WebSocket connected: session={}, board={}", session.getId(), boardId);
-        } else {
-            log.warn("WebSocket connection without boardId, session={}", session.getId());
+        
+        if (boardId == null) {
+            // fallback for tests
+        	log.warn("WebSocket connection without boardId, session={}", session.getId());
+            return;
+        }
+
+        if (session.isOpen()) {
+	        boardSessions.computeIfAbsent(boardId, k -> new CopyOnWriteArraySet<>()).add(session);
+	        sessionBoardMap.put(session.getId(), boardId);
+	        log.info("WebSocket connected: session={}, board={}", session.getId(), boardId);
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        UUID boardId = sessionBoardMap.remove(session.getId());
+    	session.isOpen();
+    	UUID boardId = sessionBoardMap.remove(session.getId());
+        
         if (boardId != null) {
             Set<WebSocketSession> sessions = boardSessions.get(boardId);
             if (sessions != null) {
@@ -72,7 +79,10 @@ public class WebSocketEventHandler extends TextWebSocketHandler {
         // The event is being sent as toString() instead of JSON
         // Candidate needs to fix this to use objectMapper.writeValueAsString()
         try {
-            String message = event.toString(); // Should be: objectMapper.writeValueAsString(event);
+            //String message = event.toString(); // Should be: objectMapper.writeValueAsString(event);
+        	
+        	String message = objectMapper.writeValueAsString(event);
+        	
             broadcastToSessions(sessions, message);
         } catch (Exception e) {
             log.error("Failed to serialize task event", e);
@@ -98,32 +108,37 @@ public class WebSocketEventHandler extends TextWebSocketHandler {
     }
 
     private void sendMessage(WebSocketSession session, String message) {
-        if (session.isOpen()) {
+    	if (session.isOpen()) { 
             try {
                 session.sendMessage(new TextMessage(message));
             } catch (IOException e) {
                 log.error("Failed to send WebSocket message to session: {}", session.getId(), e);
             }
-        }
+    	}
     }
 
-    private UUID extractBoardId(WebSocketSession session) {
-        URI uri = session.getUri();
-        if (uri != null && uri.getQuery() != null) {
-            String query = uri.getQuery();
-            for (String param : query.split("&")) {
-                String[] keyValue = param.split("=");
-                if (keyValue.length == 2 && "boardId".equals(keyValue[0])) {
-                    try {
-                        return UUID.fromString(keyValue[1]);
-                    } catch (IllegalArgumentException e) {
-                        log.warn("Invalid boardId in WebSocket query: {}", keyValue[1]);
-                    }
-                }
-            }
-        }
-        return null;
-    }
+	private UUID extractBoardId(WebSocketSession session) {
+		try {
+			URI uri = session.getUri();
+			if (uri != null && uri.getQuery() != null) {
+				String query = uri.getQuery();
+				for (String param : query.split("&")) {
+					String[] keyValue = param.split("=");
+					if (keyValue.length == 2 && "boardId".equals(keyValue[0])) {
+						try {
+	                        return UUID.fromString(keyValue[1]);
+	                    } catch (IllegalArgumentException e) {
+	                    	log.warn("Invalid boardId in WebSocket query: " + keyValue[1]);
+	                    }
+					}
+				}
+			}
+		} catch (Exception e) {
+			log.warn("Failed to extract boardId");
+		}
+
+		return null;
+	}
 
     // For testing purposes
     public int getActiveSessionCount(UUID boardId) {
