@@ -9,6 +9,7 @@ import com.taskboard.exception.InvalidStatusTransitionException;
 import com.taskboard.exception.TaskNotFoundException;
 import com.taskboard.model.Board;
 import com.taskboard.model.Task;
+import com.taskboard.model.TaskPriority;
 import com.taskboard.model.TaskStatus;
 import com.taskboard.repository.BoardRepository;
 import com.taskboard.repository.TaskRepository;
@@ -150,5 +151,33 @@ public class TaskService {
         if (!isValid) {
             throw new InvalidStatusTransitionException(from, to);
         }
+    }
+    
+    public TaskResponse updatePriority(UUID taskId, TaskPriority newPriority) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        task.setPriority(newPriority);
+
+        Task updatedTask = taskRepository.save(task);
+
+        TaskResponse response = TaskResponse.fromEntity(updatedTask);
+
+        eventPublisher.publishEvent(TaskEvent.updated(response));
+
+        return response;
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getTasksByPriority(UUID boardId, TaskPriority priority) {
+        if (!boardRepository.existsById(boardId)) {
+            throw new BoardNotFoundException(boardId);
+        }
+
+        return taskRepository.findByBoardIdOrderByCreatedAtDesc(boardId)
+                .stream()
+                .filter(task -> task.getPriority() == priority)
+                .map(TaskResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 }
