@@ -13,9 +13,9 @@ interface TaskCardProps {
 }
 
 const priorityColors = {
-  LOW: 'bg-green-500',
-  MEDIUM: 'bg-yellow-500',
-  HIGH: 'bg-red-500',
+  LOW: 'bg-green-500 text-white',
+  MEDIUM: 'bg-yellow-400 text-black',
+  HIGH: 'bg-red-500 text-white',
 }
 
 const statusOrder: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
@@ -48,7 +48,7 @@ export function TaskCard({ task, onMove, onDelete, isHighlighted }: TaskCardProp
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base font-medium">{task.title}</CardTitle>
           <Badge
-            className={cn('text-xs text-white', priorityColors[task.priority])}
+            className={cn('text-xs', priorityColors[task.priority] ?? 'bg-gray-400 text-white')}
             role="status"
             aria-label={`Priority: ${task.priority}`}
           >
