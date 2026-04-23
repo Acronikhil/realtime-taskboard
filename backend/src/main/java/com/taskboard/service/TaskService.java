@@ -110,6 +110,8 @@ public class TaskService {
         //
         // This validation is missing - candidate needs to implement it
         // validateStatusTransition(currentStatus, newStatus);
+        
+        validateStatusTransition(currentStatus, newStatus);
 
         task.setStatus(newStatus);
         Task updatedTask = taskRepository.save(task);
